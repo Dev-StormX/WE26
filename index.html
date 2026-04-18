@@ -3,68 +3,115 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Redirect</title>
+<title>Continue</title>
 
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src='//libtl.com/sdk.js' data-zone='10892924' data-sdk='show_10892924'></script>
 
 <style>
 body{
     font-family: system-ui;
+    background:#111;
+    color:#fff;
     display:flex;
     justify-content:center;
     align-items:center;
     height:100vh;
     margin:0;
 }
+.box{
+    text-align:center;
+}
+button{
+    display:none;
+    margin-top:20px;
+    padding:12px 20px;
+    border:none;
+    border-radius:8px;
+    background:#00aaff;
+    color:#fff;
+    font-size:16px;
+}
+.loader{
+    width:40px;height:40px;
+    border:4px solid #333;
+    border-top:4px solid #00aaff;
+    border-radius:50%;
+    animation:spin 1s linear infinite;
+    margin:auto;
+}
+@keyframes spin{100%{transform:rotate(360deg)}}
 </style>
 </head>
 
 <body>
 
-<div id="text">جاري التحويل...</div>
+<div class="box">
+    <div class="loader" id="loader"></div>
+    <p id="text">جاري تحميل الإعلان...</p>
+    <button id="btn">متابعة</button>
+</div>
 
 <script>
 const tg = window.Telegram.WebApp;
 tg.expand();
 tg.ready();
 
-function decode(data) {
-    try {
-        data = data.replace(/-/g, '+').replace(/_/g, '/');
-        while (data.length % 4) data += "=";
+const ZONE_ID = "10892924";
+let target = null;
+
+/* فك التشفير */
+function decode(data){
+    try{
+        data = data.replace(/-/g,'+').replace(/_/g,'/');
+        while(data.length % 4) data += "=";
         return atob(data);
-    } catch {
+    }catch{
         return null;
     }
 }
 
+/* جلب الرابط */
 const param = tg.initDataUnsafe?.start_param;
+target = decode(param);
 
-if (!param) {
-    document.getElementById("text").innerText = "❌ لا يوجد رابط";
-} else {
-
-    const target = decode(param);
-
-    if (!target || !target.startsWith("http")) {
-        document.getElementById("text").innerText = "❌ رابط غير صالح";
-    } else {
-
-        setTimeout(() => {
-
-            // ✅ افتح الرابط
-            tg.openTelegramLink(target);
-
-            // ❗ لا تغلق مباشرة
-            // أعطه وقت كافي
-
-            setTimeout(() => {
-                tg.close();
-            }, 1500); // ← هذا هو السر
-
-        }, 1000);
-    }
+/* تحقق */
+if(!target || !target.startsWith("http")){
+    document.getElementById("text").innerText = "❌ رابط غير صالح";
 }
+
+/* عرض الإعلان */
+function showAd(){
+
+    if(typeof window[`show_${ZONE_ID}`] !== "function"){
+        showButton();
+        return;
+    }
+
+    window[`show_${ZONE_ID}`]({ type: "end" })
+    .then(showButton)
+    .catch(showButton);
+}
+
+/* إظهار الزر */
+function showButton(){
+    document.getElementById("loader").style.display = "none";
+    document.getElementById("text").innerText = "اضغط للمتابعة";
+    document.getElementById("btn").style.display = "inline-block";
+}
+
+/* عند الضغط */
+document.getElementById("btn").onclick = function(){
+
+    if(!target) return;
+
+    tg.openTelegramLink(target);
+
+};
+
+/* بدء */
+setTimeout(showAd, 1000);
+
 </script>
 
 </body>
