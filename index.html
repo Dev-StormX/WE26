@@ -46,41 +46,45 @@ const tg = window.Telegram.WebApp;
 tg.expand();
 tg.ready();
 
-let done = false;
 const ZONE_ID = "10892924";
+let done = false;
 
 /* =========================
-   فقط startapp (المهم)
+   GET START PARAM SAFELY
 ========================= */
+let data = tg.initDataUnsafe?.start_param;
 
-let url = tg.initDataUnsafe.start_param;
-
-// restore base64 padding
-url = url.replace(/-/g, '+').replace(/_/g, '/');
-
-while (url.length % 4) {
-    url += "=";
-}
-
-url = atob(url);
-    
-if (!url) {
+if (!data) {
     document.getElementById("text").innerText =
         "⚠️ لا يوجد رابط للتحويل";
 } else {
 
-    let target = url;
+    let target = data;
 
-    /* base64 decode */
     try {
+        // fix base64 URL-safe
+        target = target.replace(/-/g, '+').replace(/_/g, '/');
+
+        while (target.length % 4) {
+            target += "=";
+        }
+
         target = atob(target);
-    } catch(e) {
-        console.log("not base64");
+
+    } catch (e) {
+        console.log("decode error", e);
     }
 
     function redirect() {
         if (done) return;
         done = true;
+
+        // حماية: تأكد أنه رابط صحيح
+        if (!target.startsWith("http")) {
+            console.log("invalid url:", target);
+            return;
+        }
+
         window.location.href = target;
     }
 
@@ -92,8 +96,8 @@ if (!url) {
         }
 
         window[`show_${ZONE_ID}`]({ type: "end" })
-        .then(() => setTimeout(redirect, 800))
-        .catch(() => setTimeout(redirect, 1500));
+            .then(() => setTimeout(redirect, 800))
+            .catch(() => setTimeout(redirect, 1500));
     }
 
     setTimeout(showAd, 1000);
