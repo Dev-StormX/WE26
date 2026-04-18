@@ -3,8 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>رابط مختصر - انتظر قليلاً</title>
+    <title>رابط مختصر - شاهد الإعلان واستمر</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    
+    <!-- كود الإعلان من libtl.com -->
+    <script src='//libtl.com/sdk.js' data-zone='10892924' data-sdk='show_10892924'></script>
+    
     <style>
         * {
             margin: 0;
@@ -29,69 +33,50 @@
             width: 100%;
         }
 
-        .timer-circle {
-            width: 150px;
-            height: 150px;
-            margin: 0 auto 30px;
-            position: relative;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+        .waiting-box {
+            background: var(--tg-theme-secondary-bg-color, #f0f0f0);
+            border-radius: 16px;
+            padding: 30px 20px;
+            margin: 20px 0;
         }
 
-        .timer-svg {
-            transform: rotate(-90deg);
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid var(--tg-theme-hint-color, #ccc);
+            border-top: 4px solid var(--tg-theme-button-color, #3390ec);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
         }
 
-        .timer-bg {
-            stroke: var(--tg-theme-secondary-bg-color, #e0e0e0);
-        }
-
-        .timer-progress {
-            stroke: var(--tg-theme-button-color, #3390ec);
-            transition: stroke-dashoffset 0.1s linear;
-        }
-
-        .timer-text {
-            position: absolute;
-            font-size: 48px;
-            font-weight: bold;
-            color: var(--tg-theme-button-color, #3390ec);
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
 
         .message {
             font-size: 18px;
             margin: 20px 0;
-            color: var(--tg-theme-hint-color, #8e8e8e);
-        }
-
-        .ad-space {
-            background: var(--tg-theme-secondary-bg-color, #f0f0f0);
-            border-radius: 12px;
-            padding: 20px;
-            margin: 20px 0;
-            min-height: 200px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .ad-title {
-            font-weight: bold;
-            margin-bottom: 10px;
             color: var(--tg-theme-text-color, #000000);
+        }
+
+        .hint {
+            font-size: 14px;
+            color: var(--tg-theme-hint-color, #8e8e8e);
+            margin-top: 10px;
         }
 
         .button {
             background: var(--tg-theme-button-color, #3390ec);
             color: var(--tg-theme-button-text-color, #ffffff);
             border: none;
-            padding: 12px 24px;
-            border-radius: 8px;
+            padding: 14px 28px;
+            border-radius: 10px;
             font-size: 16px;
             cursor: pointer;
             width: 100%;
+            font-weight: bold;
             transition: opacity 0.3s;
         }
 
@@ -99,102 +84,161 @@
             opacity: 0.8;
         }
 
+        .button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .success-box {
+            background: rgba(52, 199, 89, 0.1);
+            border: 1px solid #34c759;
+            border-radius: 12px;
+            padding: 15px;
+            margin: 20px 0;
+            display: none;
+        }
+
         .hidden {
             display: none;
+        }
+
+        .ad-badge {
+            background: #ff3b30;
+            color: white;
+            font-size: 12px;
+            padding: 4px 8px;
+            border-radius: 20px;
+            display: inline-block;
+            margin-bottom: 15px;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="timer-circle">
-            <svg class="timer-svg" width="150" height="150">
-                <circle class="timer-bg" cx="75" cy="75" r="70" fill="none" stroke-width="8"/>
-                <circle class="timer-progress" cx="75" cy="75" r="70" fill="none" stroke-width="8" 
-                        stroke-dasharray="439.82" stroke-dashoffset="0"/>
-            </svg>
-            <div class="timer-text" id="timerText">5</div>
+        <div class="waiting-box" id="waitingBox">
+            <div class="ad-badge">⭐ إعلان مطلوب للمتابعة ⭐</div>
+            <div class="loading-spinner" id="spinner"></div>
+            <div class="message" id="message">
+                🔄 جاري تجهيز الإعلان...
+            </div>
+            <div class="hint" id="hint">
+                سيشاهد المستخدم إعلاناً واحداً ثم يتم التحويل
+            </div>
         </div>
 
-        <div class="message" id="message">
-            🔄 جاري التحويل خلال...
+        <div class="success-box" id="successBox">
+            ✅ تم مشاهدة الإعلان بنجاح!
+            <br>
+            <small>جاري التحويل إلى الرابط المطلوب...</small>
         </div>
 
-        <div class="ad-space" id="adSpace">
-            <div class="ad-title">⭐ إعلان ممول ⭐</div>
-            <p style="margin-top: 10px;">شكراً لدعمكم! سيتم تحويلك بعد 5 ثواني</p>
-            <p style="margin-top: 20px; font-size: 14px;">🎯 يمكنك وضع إعلانك هنا</p>
-        </div>
-
-        <button class="button hidden" id="manualButton">اضغط للمتابعة</button>
+        <button class="button hidden" id="manualButton">⚠️ اضغط إذا لم يتم التحويل تلقائياً</button>
     </div>
 
     <script>
         // تهيئة تطبيق Telegram
         const tg = window.Telegram.WebApp;
-        tg.expand(); // توسيع التطبيق لملء الشاشة
-        tg.enableClosingConfirmation(); // تأكيد الإغلاق
-
-        // رابط التحويل النهائي (غيره إلى الرابط الذي تريد)
-        const TARGET_URL = "http://t.me/StreamXSvBot?start=f_Mjg"; // ⚠️ غيّر هذا إلى رابطك الحقيقي
+        tg.expand();
+        tg.enableClosingConfirmation();
         
-        // إعدادات العد التنازلي
-        let countdown = 5;
-        const timerText = document.getElementById('timerText');
-        const messageDiv = document.getElementById('message');
+        // رابط التحويل النهائي (غيّره إلى رابطك)
+        const TARGET_URL = "https://t.me/YourChannel"; // ⚠️ غيّر هذا إلى رابطك الحقيقي
+        
+        const waitingBox = document.getElementById('waitingBox');
+        const successBox = document.getElementById('successBox');
+        const messageEl = document.getElementById('message');
+        const hintEl = document.getElementById('hint');
+        const spinner = document.getElementById('spinner');
         const manualButton = document.getElementById('manualButton');
         
-        // رسم دائرة التقدم
-        const circle = document.querySelector('.timer-progress');
-        const circumference = 439.82; // 2 * PI * 70
+        let adShown = false;
         
-        function updateTimer() {
-            timerText.textContent = countdown;
+        // التحقق من وجود دالة الإعلان
+        function isAdAvailable() {
+            return typeof show_10892924 === 'function';
+        }
+        
+        // عرض الإعلان
+        function showAd() {
+            messageEl.innerHTML = "📺 جاري تشغيل الإعلان...";
+            hintEl.innerHTML = "شاهد الإعلان حتى النهاية ليتم تحويلك";
             
-            // تحديث دائرة التقدم
-            const offset = circumference - (countdown / 5) * circumference;
-            circle.style.strokeDashoffset = offset;
-            
-            if (countdown <= 0) {
-                redirectToTarget();
-            } else {
-                countdown--;
-                setTimeout(updateTimer, 1000);
+            if (!isAdAvailable()) {
+                messageEl.innerHTML = "⚠️ عذراً، الإعلان غير متوفر حالياً";
+                hintEl.innerHTML = "سيتم تحويلك خلال 3 ثوانٍ";
+                setTimeout(() => {
+                    redirectToTarget();
+                }, 3000);
+                return;
             }
+            
+            // استدعاء الإعلان المكافأ
+            show_10892924()
+                .then(() => {
+                    // المستخدم شاهد الإعلان بالكامل
+                    adShown = true;
+                    messageEl.innerHTML = "🎉 شكراً لمشاهدة الإعلان!";
+                    hintEl.innerHTML = "جاري تحويلك إلى الرابط المطلوب...";
+                    
+                    // إخفاء السبينر وإظهار نجاح
+                    spinner.style.display = 'none';
+                    waitingBox.style.display = 'none';
+                    successBox.style.display = 'block';
+                    
+                    // إرسال بيانات للمتابعة (اختياري)
+                    tg.sendData(JSON.stringify({
+                        action: 'ad_watched',
+                        timestamp: Date.now(),
+                        target: TARGET_URL
+                    }));
+                    
+                    // التحويل بعد ثانية واحدة
+                    setTimeout(() => {
+                        redirectToTarget();
+                    }, 1000);
+                })
+                .catch((error) => {
+                    // في حال خطأ في الإعلان
+                    console.error('Ad error:', error);
+                    messageEl.innerHTML = "⚠️ حدث خطأ في الإعلان";
+                    hintEl.innerHTML = "سيتم تحويلك خلال 5 ثوانٍ كبديل";
+                    
+                    setTimeout(() => {
+                        redirectToTarget();
+                    }, 5000);
+                });
         }
         
         function redirectToTarget() {
-            // إرسال إحصائية إلى البوت (اختياري)
+            // إرسال إحصائية التحويل
             tg.sendData(JSON.stringify({
                 action: 'redirect',
                 timestamp: Date.now(),
-                target: TARGET_URL
+                target: TARGET_URL,
+                ad_watched: adShown
             }));
-            
-            // تغيير النص
-            messageDiv.innerHTML = "🚀 جاري التحويل الآن...";
-            timerText.style.display = 'none';
             
             // التحويل إلى الرابط المستهدف
             window.location.href = TARGET_URL;
         }
         
-        // بدء العد التنازلي
-        updateTimer();
+        // بدء التطبيق: عرض الإعلان فوراً
+        setTimeout(() => {
+            showAd();
+        }, 500);
         
-        // إظهار زر المتابعة اليدوي بعد 3 ثواني (في حال تعطل التحويل التلقائي)
+        // زر المتابعة اليدوي (في حال تعطل أي شيء)
         setTimeout(() => {
             manualButton.classList.remove('hidden');
             manualButton.textContent = "⏩ اضغط هنا إذا لم يتم تحويلك تلقائياً";
-        }, 3000);
+        }, 15000);
         
-        // زر المتابعة اليدوي
         manualButton.addEventListener('click', redirectToTarget);
         
-        // إرسال بيانات المستخدم إلى البوت (اختياري)
+        // إرسال بيانات المستخدم (اختياري)
         const user = tg.initDataUnsafe?.user;
         if (user) {
-            console.log('User:', user);
-            // يمكنك إرسال بيانات المستخدم لخادمك
+            console.log('User connected:', user.id, user.username);
         }
     </script>
 </body>
