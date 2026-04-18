@@ -21,14 +21,14 @@ body{
 
 <body>
 
-<div>جاري التحويل...</div>
+<div id="text">جاري التحويل...</div>
 
 <script>
 const tg = window.Telegram.WebApp;
 tg.expand();
 tg.ready();
 
-function decodeBase64Url(data) {
+function decode(data) {
     try {
         data = data.replace(/-/g, '+').replace(/_/g, '/');
         while (data.length % 4) data += "=";
@@ -41,20 +41,26 @@ function decodeBase64Url(data) {
 const param = tg.initDataUnsafe?.start_param;
 
 if (!param) {
-    document.body.innerHTML = "❌ لا يوجد رابط";
+    document.getElementById("text").innerText = "❌ لا يوجد رابط";
 } else {
 
-    const target = decodeBase64Url(param);
+    const target = decode(param);
 
     if (!target || !target.startsWith("http")) {
-        document.body.innerHTML = "❌ رابط غير صالح";
+        document.getElementById("text").innerText = "❌ رابط غير صالح";
     } else {
 
-        // 🔥 الحل الرسمي من Telegram
         setTimeout(() => {
-            tg.openTelegramLink(target);
-        }, 1000);
 
+            // ✅ افتح الرابط داخل Telegram
+            tg.openTelegramLink(target);
+
+            // ✅ اغلق الميني اب (الحل لمشكلة الشاشة السوداء)
+            setTimeout(() => {
+                tg.close();
+            }, 300);
+
+        }, 1000);
     }
 }
 </script>
