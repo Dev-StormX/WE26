@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ar">
 <head>
@@ -6,16 +7,11 @@
     <title>رابط مختصر - شاهد الإعلان واستمر</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     
-    <!-- كود الإعلان من libtl.com -->
-    <script src='//libtl.com/sdk.js' data-zone='10892924' data-sdk='show_10892924'></script>
+    <!-- Monetag SDK - الطريقة الصحيحة -->
+    <script src="https://libtl.com/sdk.js" data-zone="10892924" data-sdk="show_10892924"></script>
     
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: var(--tg-theme-bg-color, #ffffff);
@@ -26,21 +22,18 @@
             align-items: center;
             padding: 20px;
         }
-
         .container {
             text-align: center;
             max-width: 400px;
             width: 100%;
         }
-
-        .waiting-box {
+        .card {
             background: var(--tg-theme-secondary-bg-color, #f0f0f0);
             border-radius: 16px;
             padding: 30px 20px;
             margin: 20px 0;
         }
-
-        .loading-spinner {
+        .loading {
             width: 50px;
             height: 50px;
             border: 4px solid var(--tg-theme-hint-color, #ccc);
@@ -49,24 +42,9 @@
             animation: spin 1s linear infinite;
             margin: 0 auto 20px;
         }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .message {
-            font-size: 18px;
-            margin: 20px 0;
-            color: var(--tg-theme-text-color, #000000);
-        }
-
-        .hint {
-            font-size: 14px;
-            color: var(--tg-theme-hint-color, #8e8e8e);
-            margin-top: 10px;
-        }
-
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .message { font-size: 18px; margin: 20px 0; color: var(--tg-theme-text-color, #000000); }
+        .hint { font-size: 14px; color: var(--tg-theme-hint-color, #8e8e8e); margin-top: 10px; }
         .button {
             background: var(--tg-theme-button-color, #3390ec);
             color: var(--tg-theme-button-text-color, #ffffff);
@@ -79,16 +57,8 @@
             font-weight: bold;
             transition: opacity 0.3s;
         }
-
-        .button:active {
-            opacity: 0.8;
-        }
-
-        .retry-button {
-            background: #ff3b30;
-            margin-top: 15px;
-        }
-
+        .button:active { opacity: 0.8; }
+        .retry-btn { background: #ff3b30; margin-top: 15px; }
         .success-box {
             background: rgba(52, 199, 89, 0.1);
             border: 1px solid #34c759;
@@ -97,7 +67,6 @@
             margin: 20px 0;
             display: none;
         }
-
         .error-box {
             background: rgba(255, 59, 48, 0.1);
             border: 1px solid #ff3b30;
@@ -106,7 +75,6 @@
             margin: 20px 0;
             display: none;
         }
-
         .ad-badge {
             background: #ff3b30;
             color: white;
@@ -116,244 +84,179 @@
             display: inline-block;
             margin-bottom: 15px;
         }
+        .info-text {
+            background: rgba(51, 144, 236, 0.1);
+            border-radius: 8px;
+            padding: 10px;
+            margin-top: 15px;
+            font-size: 12px;
+            color: var(--tg-theme-hint-color);
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="waiting-box" id="waitingBox">
+        <div class="card" id="waitingBox">
             <div class="ad-badge">⭐ إعلان مطلوب للمتابعة ⭐</div>
-            <div class="loading-spinner" id="spinner"></div>
-            <div class="message" id="message">
-                🔄 جاري تجهيز الإعلان...
-            </div>
+            <div class="loading" id="spinner"></div>
+            <div class="message" id="message">🔍 جاري تجهيز الإعلان...</div>
             <div class="hint" id="hint">
-                سيشاهد المستخدم إعلاناً واحداً ثم يتم التحويل
+                ⏱️ سيظهر زر الإغلاق بعد 15 ثانية - يرجى الانتظار
+            </div>
+            <div class="info-text">
+                💡 ملاحظة: زر الإغلاق "✖" يظهر تلقائياً بعد 15 ثانية من مشاهدة الإعلان
             </div>
         </div>
 
         <div class="success-box" id="successBox">
-            ✅ تم مشاهدة الإعلان بنجاح!
-            <br>
-            <small>جاري التحويل إلى الرابط المطلوب...</small>
+            ✅ تم مشاهدة الإعلان بنجاح!<br>
+            <small>جاري التحويل...</small>
         </div>
 
         <div class="error-box" id="errorBox">
-            ❌ لم يتم مشاهدة الإعلان بالكامل
-            <br>
-            <small>يرجى مشاهدة الإعلان حتى النهاية للتحويل</small>
-            <br>
-            <button class="button retry-button" id="retryButton">🔄 إعادة محاولة مشاهدة الإعلان</button>
+            ❌ لم يتم مشاهدة الإعلان بالكامل<br>
+            <small>يجب مشاهدة الإعلان حتى النهاية (15 ثانية) ليتم التحويل</small>
+            <button class="button retry-btn" id="retryBtn">🔄 إعادة المحاولة</button>
         </div>
 
-        <button class="button hidden" id="manualButton">⚠️ اضغط إذا لم يتم التحويل تلقائياً</button>
+        <button class="button" id="manualBtn" style="display: none;">⚠️ تحويل مباشر (بدون إعلان)</button>
     </div>
 
     <script>
-        // تهيئة تطبيق Telegram
+        // تهيئة Telegram WebApp
         const tg = window.Telegram.WebApp;
         tg.expand();
         tg.enableClosingConfirmation();
         
-        // منع إغلاق التطبيق عند النقر خارج الإعلان
-        tg.isClosingConfirmationEnabled = true;
+        // رابط التحويل النهائي - غيّره إلى رابطك
+        const TARGET_URL = "https://t.me/YourChannel";
         
-        // رابط التحويل النهائي (غيّره إلى رابطك)
-        const TARGET_URL = "http://t.me/NetflixPremuimBot?start=f_MTA"; // ⚠️ غيّر هذا إلى رابطك الحقيقي
+        // المتغيرات
+        let adCompleted = false;
+        let redirectAttempted = false;
+        const ZONE_ID = '10892924';
         
+        // العناصر
         const waitingBox = document.getElementById('waitingBox');
         const successBox = document.getElementById('successBox');
         const errorBox = document.getElementById('errorBox');
         const messageEl = document.getElementById('message');
         const hintEl = document.getElementById('hint');
         const spinner = document.getElementById('spinner');
-        const manualButton = document.getElementById('manualButton');
-        const retryButton = document.getElementById('retryButton');
-        
-        let adShown = false;
-        let adCompleted = false;
-        let redirectAttempted = false;
+        const retryBtn = document.getElementById('retryBtn');
+        const manualBtn = document.getElementById('manualBtn');
         
         // التحقق من وجود دالة الإعلان
         function isAdAvailable() {
-            return typeof show_10892924 === 'function';
+            return typeof window[`show_${ZONE_ID}`] === 'function';
         }
         
-        // منع إغلاق التطبيق
-        function preventAppClose() {
-            try {
-                // منع حدث الإغلاق
-                window.addEventListener('beforeunload', function(e) {
-                    if (!adCompleted && !redirectAttempted) {
-                        e.preventDefault();
-                        e.returnValue = '';
-                        return '';
-                    }
-                });
-                
-                // منع الإغلاق عبر Telegram WebApp
-                if (tg && tg.close) {
-                    const originalClose = tg.close;
-                    tg.close = function() {
-                        if (!adCompleted && !redirectAttempted) {
-                            console.log('تم منع إغلاق التطبيق قبل مشاهدة الإعلان');
-                            showErrorAndRetry();
-                            return false;
-                        }
-                        return originalClose.apply(this, arguments);
-                    };
-                }
-            } catch(e) {
-                console.log('Prevent close error:', e);
-            }
-        }
-        
-        // عرض رسالة خطأ وخيار إعادة المحاولة
-        function showErrorAndRetry() {
-            waitingBox.style.display = 'none';
-            successBox.style.display = 'none';
-            errorBox.style.display = 'block';
-            spinner.style.display = 'none';
-        }
-        
-        // عرض الإعلان
+        // عرض الإعلان بالطريقة الصحيحة حسب وثائق Monetag
         function showAd() {
-            messageEl.innerHTML = "📺 جاري تشغيل الإعلان...";
-            hintEl.innerHTML = "⚠️ لا تغلق الإعلان - شاهده حتى النهاية";
-            
             if (!isAdAvailable()) {
-                messageEl.innerHTML = "⚠️ عذراً، الإعلان غير متوفر حالياً";
-                hintEl.innerHTML = "سيتم تحويلك خلال 3 ثوانٍ";
-                setTimeout(() => {
-                    redirectToTarget();
-                }, 3000);
+                messageEl.innerHTML = "⚠️ الإعلان غير متوفر حالياً";
+                hintEl.innerHTML = "سيتم التحويل خلال 3 ثوانٍ";
+                setTimeout(() => redirectToTarget(), 3000);
                 return;
             }
             
-            // إنشاء Promise مخصص للتحكم بشكل أفضل
-            const adPromise = show_10892924();
+            messageEl.innerHTML = "📺 جاري تشغيل الإعلان...";
+            hintEl.innerHTML = "⏱️ انتظر 15 ثانية حتى يظهر زر الإغلاق";
             
-            // مهلة زمنية للإعلان (30 ثانية كحد أقصى)
-            const timeoutId = setTimeout(() => {
-                console.log('Ad timeout');
-                if (!adCompleted) {
-                    showErrorAndRetry();
-                }
-            }, 30000);
+            // استدعاء الإعلان بالطريقة الصحيحة مع معالجة الأخطاء
+            // استخدام catchIfNoFeed للتعامل مع حالة عدم وجود إعلانات
+            const adFunction = window[`show_${ZONE_ID}`];
             
-            adPromise
-                .then(() => {
-                    clearTimeout(timeoutId);
-                    // المستخدم شاهد الإعلان بالكامل
-                    adCompleted = true;
-                    adShown = true;
-                    
-                    messageEl.innerHTML = "🎉 شكراً لمشاهدة الإعلان!";
-                    hintEl.innerHTML = "جاري تحويلك إلى الرابط المطلوب...";
-                    
-                    // إخفاء السبينر وإظهار نجاح
-                    spinner.style.display = 'none';
-                    waitingBox.style.display = 'none';
-                    successBox.style.display = 'block';
-                    
-                    // إرسال بيانات للمتابعة
-                    tg.sendData(JSON.stringify({
-                        action: 'ad_watched',
-                        timestamp: Date.now(),
-                        target: TARGET_URL
-                    }));
-                    
-                    // التحويل بعد ثانية واحدة
-                    setTimeout(() => {
-                        if (!redirectAttempted) {
-                            redirectAttempted = true;
-                            redirectToTarget();
-                        }
-                    }, 1000);
-                })
-                .catch((error) => {
-                    clearTimeout(timeoutId);
-                    console.error('Ad error or closed early:', error);
-                    // المستخدم أغلق الإعلان قبل نهايته
-                    showErrorAndRetry();
-                });
+            // محاولة عرض الإعلان مع معاملات إضافية للتحكم بشكل أفضل
+            adFunction({ 
+                catchIfNoFeed: true,
+                requestVar: 'redirect_app'
+            })
+            .then((result) => {
+                // تم مشاهدة الإعلان بنجاح
+                console.log('Ad completed:', result);
+                adCompleted = true;
+                
+                // إخفاء واجهة الانتظار وإظهار النجاح
+                spinner.style.display = 'none';
+                waitingBox.style.display = 'none';
+                successBox.style.display = 'block';
+                
+                // إرسال بيانات إلى البوت
+                tg.sendData(JSON.stringify({
+                    action: 'ad_watched',
+                    timestamp: Date.now(),
+                    zone: ZONE_ID,
+                    reward_event_type: result?.reward_event_type || 'valued'
+                }));
+                
+                // التحويل بعد ثانية
+                setTimeout(() => redirectToTarget(), 1000);
+            })
+            .catch((error) => {
+                // فشل الإعلان أو أغلقه المستخدم قبل 15 ثانية
+                console.error('Ad error:', error);
+                showErrorAndRetry();
+            });
+        }
+        
+        function showErrorAndRetry() {
+            waitingBox.style.display = 'none';
+            errorBox.style.display = 'block';
         }
         
         function redirectToTarget() {
             if (redirectAttempted) return;
             redirectAttempted = true;
             
-            // إرسال إحصائية التحويل
             tg.sendData(JSON.stringify({
                 action: 'redirect',
                 timestamp: Date.now(),
-                target: TARGET_URL,
-                ad_watched: adShown,
                 ad_completed: adCompleted
             }));
             
-            // التحويل إلى الرابط المستهدف
             window.location.href = TARGET_URL;
         }
         
-        // إعادة المحاولة
         function retryAd() {
             adCompleted = false;
-            adShown = false;
             redirectAttempted = false;
-            
-            // إعادة تعيين الواجهة
             errorBox.style.display = 'none';
             waitingBox.style.display = 'block';
             successBox.style.display = 'none';
             spinner.style.display = 'block';
             messageEl.innerHTML = "🔄 جاري إعادة تجهيز الإعلان...";
-            hintEl.innerHTML = "يرجى مشاهدة الإعلان حتى النهاية هذه المرة";
-            
-            // محاولة عرض الإعلان مرة أخرى
-            setTimeout(() => {
-                showAd();
-            }, 500);
+            hintEl.innerHTML = "⏱️ سيظهر زر الإغلاق بعد 15 ثانية - يرجى الانتظار";
+            setTimeout(() => showAd(), 500);
         }
-        
-        // تفعيل منع الإغلاق
-        preventAppClose();
-        
-        // بدء التطبيق: عرض الإعلان فوراً
-        setTimeout(() => {
-            showAd();
-        }, 500);
-        
-        // زر المتابعة اليدوي (في حال تعطل أي شيء)
-        setTimeout(() => {
-            manualButton.classList.remove('hidden');
-            manualButton.textContent = "⏩ اضغط هنا للتحويل المباشر (بدون إعلان)";
-        }, 20000);
-        
-        manualButton.addEventListener('click', () => {
-            if (!redirectAttempted) {
-                redirectAttempted = true;
-                redirectToTarget();
-            }
-        });
         
         // زر إعادة المحاولة
-        retryButton.addEventListener('click', retryAd);
+        retryBtn.addEventListener('click', retryAd);
         
-        // إرسال بيانات المستخدم
-        const user = tg.initDataUnsafe?.user;
-        if (user) {
-            console.log('User connected:', user.id, user.username);
-        }
+        // زر التحويل المباشر كحل أخير (يظهر بعد 30 ثانية)
+        setTimeout(() => {
+            if (!adCompleted && !redirectAttempted) {
+                manualBtn.style.display = 'block';
+            }
+        }, 30000);
         
-        // منع الخروج بالزر الخلفي للمتصفح
-        window.addEventListener('popstate', function(e) {
+        manualBtn.addEventListener('click', () => {
+            if (!redirectAttempted) redirectToTarget();
+        });
+        
+        // بدء التطبيق
+        setTimeout(() => showAd(), 500);
+        
+        // منع الإغلاق العرضي
+        window.addEventListener('beforeunload', (e) => {
             if (!adCompleted && !redirectAttempted) {
                 e.preventDefault();
-                showErrorAndRetry();
-                history.pushState(null, null, location.href);
+                e.returnValue = '';
             }
         });
-        history.pushState(null, null, location.href);
+        
+        // معلومات المستخدم
+        console.log('User:', tg.initDataUnsafe?.user);
     </script>
 </body>
 </html>
