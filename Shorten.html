@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Base62 Shortener</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+body{
+    font-family:system-ui;
+    background:#0f0f0f;
+    color:#fff;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    height:100vh;
+    margin:0;
+}
+.container{
+    width:90%;
+    max-width:500px;
+    text-align:center;
+}
+input{
+    width:100%;
+    padding:12px;
+    margin:10px 0;
+    border-radius:8px;
+    border:none;
+}
+button{
+    padding:12px;
+    width:100%;
+    background:#00aaff;
+    color:#fff;
+    border:none;
+    border-radius:8px;
+    cursor:pointer;
+}
+.result{
+    margin-top:20px;
+    word-break:break-all;
+    background:#1a1a1a;
+    padding:10px;
+    border-radius:8px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h2>Base62 Shortener</h2>
+
+<input id="url" placeholder="Enter URL here">
+<button onclick="generate()">Generate</button>
+
+<div class="result" id="result"></div>
+
+</div>
+
+<script>
+
+/* =========================
+   Base62 Engine
+========================= */
+
+const BASE62 = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+/* encode string → Base62 */
+function encodeBase62(str){
+    const bytes = new TextEncoder().encode(str);
+
+    let num = 0n;
+    for (let b of bytes) {
+        num = (num << 8n) + BigInt(b);
+    }
+
+    let result = "";
+    while (num > 0n) {
+        result = BASE62[num % 62n] + result;
+        num = num / 62n;
+    }
+
+    return result || "0";
+}
+
+/* =========================
+   Generate Link
+========================= */
+
+function generate(){
+
+    let url = document.getElementById("url").value;
+
+    if(!url){
+        alert("Enter URL");
+        return;
+    }
+
+    // encode
+    let encoded = encodeBase62(url);
+
+    // final Telegram link
+    let finalLink = `https://t.me/WatchCIMA26Bot/watch?startapp=${encoded}`;
+
+    document.getElementById("result").innerHTML = `
+        <b>Short Link:</b><br><br>
+        <a href="${finalLink}" target="_blank">${finalLink}</a>
+        <br><br>
+        <b>Base62:</b><br>${encoded}
+    `;
+}
+
+</script>
+
+</body>
+</html>
