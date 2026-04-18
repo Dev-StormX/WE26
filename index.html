@@ -6,7 +6,7 @@
     <title>رابط مختصر - شاهد الإعلان واستمر</title>
     <script src="https://telegram.org/js/telegram-web-app.js?62"></script>
     
-    <!-- Monetag SDK -->
+    <!-- Monetag SDK - يجب تحميله قبل استخدامه -->
     <script src='//libtl.com/sdk.js' data-zone='10892924' data-sdk='show_10892924'></script>
     
     <style>
@@ -42,7 +42,7 @@
             margin: 0 auto 20px;
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .message { font-size: 18px; margin: 20px 0; color: var(--tg-theme-text-color, #000000); }
+        .message { font-size: 18px; margin: 20px 0; }
         .hint { font-size: 14px; color: var(--tg-theme-hint-color, #8e8e8e); margin-top: 10px; }
         .button {
             background: var(--tg-theme-button-color, #3390ec);
@@ -56,7 +56,6 @@
             font-weight: bold;
             transition: opacity 0.3s;
         }
-        .button:active { opacity: 0.8; }
         .retry-btn { background: #ff3b30; margin-top: 15px; }
         .success-box {
             background: rgba(52, 199, 89, 0.1);
@@ -74,197 +73,227 @@
             margin: 20px 0;
             display: none;
         }
-        .ad-badge {
-            background: #ff3b30;
-            color: white;
-            font-size: 12px;
-            padding: 4px 8px;
-            border-radius: 20px;
-            display: inline-block;
-            margin-bottom: 15px;
-        }
-        .info-text {
+        .preload-box {
             background: rgba(51, 144, 236, 0.1);
-            border-radius: 8px;
+            border-radius: 12px;
             padding: 10px;
             margin-top: 15px;
             font-size: 12px;
-            color: var(--tg-theme-hint-color);
         }
+        .ad-badge { background: #ff3b30; color: white; font-size: 12px; padding: 4px 8px; border-radius: 20px; display: inline-block; margin-bottom: 15px; }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="card" id="waitingBox">
-            <div class="ad-badge">⭐ إعلان مطلوب للمتابعة ⭐</div>
+            <div class="ad-badge">⭐ شاهد الإعلان للمتابعة ⭐</div>
             <div class="loading" id="spinner"></div>
             <div class="message" id="message">🔍 جاري تجهيز الإعلان...</div>
-            <div class="hint" id="hint">
-                ⏱️ سيظهر زر الإغلاق بعد 15 ثانية - يرجى الانتظار
-            </div>
-            <div class="info-text">
-                💡 ملاحظة: زر الإغلاق "✖" يظهر تلقائياً بعد 15 ثانية من مشاهدة الإعلان
-            </div>
+            <div class="hint" id="hint">يجب مشاهدة الإعلان حتى النهاية للتحويل</div>
+            <div class="preload-box" id="preloadStatus">⏳ يتم تحميل الإعلان مسبقاً...</div>
         </div>
 
         <div class="success-box" id="successBox">
             ✅ تم مشاهدة الإعلان بنجاح!<br>
-            <small>جاري التحويل...</small>
+            <small>جاري التحويل إلى الرابط المطلوب...</small>
         </div>
 
         <div class="error-box" id="errorBox">
-            ❌ لم يتم مشاهدة الإعلان بالكامل<br>
-            <small>يجب مشاهدة الإعلان حتى النهاية (15 ثانية) ليتم التحويل</small>
-            <button class="button retry-btn" id="retryBtn">🔄 إعادة المحاولة</button>
+            ❌ الإعلان غير متوفر حالياً<br>
+            <small>سيتم تحويلك خلال 3 ثوانٍ</small>
+            <div class="preload-box" style="margin-top: 10px;">🔄 جاري المحاولة مرة أخرى...</div>
         </div>
-
-        <button class="button" id="manualBtn" style="display: none;">⚠️ تحويل مباشر (بدون إعلان)</button>
     </div>
 
     <script>
-        // تهيئة Telegram WebApp
-        const tg = window.Telegram.WebApp;
-        tg.expand();
-        
-        // ✅ الحل الأساسي: تفعيل زر الرجوع ومنع الإغلاق التلقائي
-        tg.BackButton.show(); // إظهار زر الرجوع
-        tg.enableClosingConfirmation(); // تفعيل تأكيد الإغلاق
-        
-        // التعامل مع ضغط زر الرجوع
-        tg.BackButton.onClick(() => {
-            // بدلاً من إغلاق التطبيق، نعرض رسالة أو نتعامل مع الموقف
-            tg.showPopup({
-                title: "⚠️ تحذير",
-                message: "لم تقم بمشاهدة الإعلان بعد. هل تريد الخروج؟",
-                buttons: [
-                    { id: "cancel", type: "cancel", text: "إكمال مشاهدة الإعلان" },
-                    { id: "exit", type: "destructive", text: "خروج" }
-                ]
-            }, (buttonId) => {
-                if (buttonId === "exit") {
-                    tg.close(); // إغلاق التطبيق فقط إذا أكد المستخدم
+        (function() {
+            // تهيئة Telegram WebApp
+            const tg = window.Telegram.WebApp;
+            tg.expand();
+            
+            // ✅ تفعيل زر الرجوع مع تأكيد الإغلاق
+            tg.BackButton.show();
+            tg.enableClosingConfirmation();
+            
+            // التعامل مع زر الرجوع
+            tg.BackButton.onClick(() => {
+                if (!adCompleted && !redirectAttempted) {
+                    tg.showPopup({
+                        title: "⚠️ تنبيه",
+                        message: "لم تقم بمشاهدة الإعلان بعد. مشاهدة الإعلان ضرورية للتحويل إلى الرابط المطلوب.",
+                        buttons: [
+                            { id: "stay", type: "cancel", text: "مشاهدة الإعلان" },
+                            { id: "exit", type: "destructive", text: "خروج" }
+                        ]
+                    }, (buttonId) => {
+                        if (buttonId === "exit") tg.close();
+                    });
+                } else {
+                    tg.close();
                 }
             });
-        });
-        
-        // رابط التحويل النهائي - غيّره إلى رابطك
-        const TARGET_URL = "https://t.me/YourChannel";
-        
-        // المتغيرات
-        let adCompleted = false;
-        let redirectAttempted = false;
-        const ZONE_ID = '10892924';
-        
-        // العناصر
-        const waitingBox = document.getElementById('waitingBox');
-        const successBox = document.getElementById('successBox');
-        const errorBox = document.getElementById('errorBox');
-        const messageEl = document.getElementById('message');
-        const hintEl = document.getElementById('hint');
-        const spinner = document.getElementById('spinner');
-        const retryBtn = document.getElementById('retryBtn');
-        const manualBtn = document.getElementById('manualBtn');
-        
-        // التحقق من وجود دالة الإعلان
-        function isAdAvailable() {
-            return typeof window[`show_${ZONE_ID}`] === 'function';
-        }
-        
-        // عرض الإعلان
-        function showAd() {
-            if (!isAdAvailable()) {
-                messageEl.innerHTML = "⚠️ الإعلان غير متوفر حالياً";
-                hintEl.innerHTML = "سيتم التحويل خلال 3 ثوانٍ";
-                setTimeout(() => redirectToTarget(), 3000);
-                return;
+            
+            // المتغيرات
+            const ZONE_ID = '10892924';
+            const TARGET_URL = "https://t.me/YourChannel"; // ⚠️ غيّر هذا إلى رابطك الحقيقي
+            
+            let adCompleted = false;
+            let redirectAttempted = false;
+            let isAdPreloaded = false;
+            
+            // العناصر
+            const waitingBox = document.getElementById('waitingBox');
+            const successBox = document.getElementById('successBox');
+            const errorBox = document.getElementById('errorBox');
+            const messageEl = document.getElementById('message');
+            const hintEl = document.getElementById('hint');
+            const spinner = document.getElementById('spinner');
+            const preloadStatus = document.getElementById('preloadStatus');
+            
+            // الحصول على معرف المستخدم الفريد لـ ymid
+            const userId = tg.initDataUnsafe?.user?.id || `guest_${Date.now()}`;
+            
+            // ✅ الخطوة 1: تحميل الإعلان مسبقاً (Preload)
+            function preloadAd() {
+                if (typeof window[`show_${ZONE_ID}`] !== 'function') {
+                    preloadStatus.innerHTML = "⚠️ SDK غير متوفر، سيتم المحاولة مباشرة";
+                    return false;
+                }
+                
+                preloadStatus.innerHTML = "📥 جاري تحميل الإعلان مسبقاً...";
+                
+                // تحميل الإعلان مسبقاً حسب وثائق Monetag
+                window[`show_${ZONE_ID}`]({ 
+                    type: 'preload', 
+                    ymid: userId 
+                })
+                .then(() => {
+                    isAdPreloaded = true;
+                    preloadStatus.innerHTML = "✅ الإعلان جاهز للعرض";
+                    preloadStatus.style.background = "rgba(52, 199, 89, 0.2)";
+                })
+                .catch((error) => {
+                    console.log('Preload failed:', error);
+                    preloadStatus.innerHTML = "⚠️ سيتم تحميل الإعلان عند الطلب";
+                });
+                
+                return true;
             }
             
-            messageEl.innerHTML = "📺 جاري تشغيل الإعلان...";
-            hintEl.innerHTML = "⏱️ انتظر 15 ثانية حتى يظهر زر الإغلاق";
+            // ✅ الخطوة 2: عرض الإعلان (مع fallback)
+            function showAd() {
+                if (typeof window[`show_${ZONE_ID}`] !== 'function') {
+                    messageEl.innerHTML = "⚠️ SDK غير متوفر";
+                    hintEl.innerHTML = "سيتم التحويل خلال 3 ثوانٍ";
+                    setTimeout(() => redirectToTarget(), 3000);
+                    return;
+                }
+                
+                messageEl.innerHTML = "📺 جاري تشغيل الإعلان...";
+                hintEl.innerHTML = "⚠️ شاهد الإعلان حتى النهاية للتحويل";
+                
+                // ✅ عرض الإعلان حسب وثائق Monetag مع ymid
+                window[`show_${ZONE_ID}`]({ 
+                    ymid: userId,
+                    requestVar: 'redirect_app'  // لتتبع مصدر الطلب
+                })
+                .then(() => {
+                    // ✅ المستخدم شاهد الإعلان بالكامل
+                    console.log('User watched the ad completely');
+                    adCompleted = true;
+                    
+                    // إخفاء واجهة الانتظار
+                    spinner.style.display = 'none';
+                    waitingBox.style.display = 'none';
+                    successBox.style.display = 'block';
+                    
+                    // إرسال إشعار إلى البوت
+                    tg.sendData(JSON.stringify({
+                        action: 'ad_completed',
+                        timestamp: Date.now(),
+                        user_id: userId,
+                        zone_id: ZONE_ID
+                    }));
+                    
+                    // التحويل بعد ثانية
+                    setTimeout(() => redirectToTarget(), 1000);
+                })
+                .catch((error) => {
+                    // ✅ فشل الإعلان أو تم تخطيه
+                    console.log('Ad failed or was skipped:', error);
+                    
+                    // fallback: تحويل مباشر بعد 3 ثوانٍ
+                    waitingBox.style.display = 'none';
+                    errorBox.style.display = 'block';
+                    
+                    setTimeout(() => {
+                        redirectToTarget();
+                    }, 3000);
+                });
+            }
             
-            const adFunction = window[`show_${ZONE_ID}`];
-            
-            adFunction({ 
-                catchIfNoFeed: true,
-                requestVar: 'redirect_app'
-            })
-            .then(() => {
-                adCompleted = true;
-                spinner.style.display = 'none';
-                waitingBox.style.display = 'none';
-                successBox.style.display = 'block';
+            function redirectToTarget() {
+                if (redirectAttempted) return;
+                redirectAttempted = true;
                 
                 tg.sendData(JSON.stringify({
-                    action: 'ad_watched',
+                    action: 'redirect',
                     timestamp: Date.now(),
-                    zone: ZONE_ID
+                    ad_completed: adCompleted,
+                    user_id: userId
                 }));
                 
-                setTimeout(() => redirectToTarget(), 1000);
-            })
-            .catch((error) => {
-                console.error('Ad error:', error);
-                showErrorAndRetry();
-            });
-        }
-        
-        function showErrorAndRetry() {
-            waitingBox.style.display = 'none';
-            errorBox.style.display = 'block';
-        }
-        
-        function redirectToTarget() {
-            if (redirectAttempted) return;
-            redirectAttempted = true;
-            
-            tg.sendData(JSON.stringify({
-                action: 'redirect',
-                timestamp: Date.now(),
-                ad_completed: adCompleted
-            }));
-            
-            window.location.href = TARGET_URL;
-        }
-        
-        function retryAd() {
-            adCompleted = false;
-            redirectAttempted = false;
-            errorBox.style.display = 'none';
-            waitingBox.style.display = 'block';
-            successBox.style.display = 'none';
-            spinner.style.display = 'block';
-            messageEl.innerHTML = "🔄 جاري إعادة تجهيز الإعلان...";
-            hintEl.innerHTML = "⏱️ سيظهر زر الإغلاق بعد 15 ثانية - يرجى الانتظار";
-            setTimeout(() => showAd(), 500);
-        }
-        
-        // أزرار التحكم
-        retryBtn.addEventListener('click', retryAd);
-        
-        setTimeout(() => {
-            if (!adCompleted && !redirectAttempted) {
-                manualBtn.style.display = 'block';
+                window.location.href = TARGET_URL;
             }
-        }, 30000);
-        
-        manualBtn.addEventListener('click', () => {
-            if (!redirectAttempted) redirectToTarget();
-        });
-        
-        // بدء التطبيق
-        setTimeout(() => showAd(), 500);
-        
-        // منع الإغلاق العرضي للصفحة
-        window.addEventListener('beforeunload', (e) => {
-            if (!adCompleted && !redirectAttempted) {
-                e.preventDefault();
-                e.returnValue = '';
+            
+            // ✅ إعادة المحاولة مع preload جديد
+            function retryWithPreload() {
+                errorBox.style.display = 'none';
+                waitingBox.style.display = 'block';
+                successBox.style.display = 'none';
+                spinner.style.display = 'block';
+                messageEl.innerHTML = "🔄 جاري تحضير الإعلان مجدداً...";
+                hintEl.innerHTML = "سيتم تشغيل الإعلان فور تجهيزه";
+                preloadStatus.innerHTML = "📥 جاري تحميل الإعلان مسبقاً...";
+                preloadStatus.style.background = "rgba(51, 144, 236, 0.1)";
+                isAdPreloaded = false;
+                
+                // إعادة preload ثم عرض الإعلان
+                preloadAd();
+                setTimeout(() => {
+                    if (!adCompleted && !redirectAttempted) {
+                        showAd();
+                    }
+                }, 1500);
             }
-        });
-        
-        // معلومات المستخدم للتأكد
-        console.log('User:', tg.initDataUnsafe?.user);
-        console.log('BackButton available:', !!tg.BackButton);
+            
+            // ربط زر إعادة المحاولة
+            const retryBtn = document.getElementById('retryBtn');
+            if (retryBtn) {
+                retryBtn.addEventListener('click', retryWithPreload);
+            } else {
+                // إضافة الزر ديناميكياً إذا لم يكن موجوداً
+                const btn = document.createElement('button');
+                btn.className = 'button retry-btn';
+                btn.id = 'retryBtn';
+                btn.textContent = '🔄 إعادة المحاولة';
+                btn.addEventListener('click', retryWithPreload);
+                document.querySelector('.error-box')?.appendChild(btn);
+            }
+            
+            // ✅ إعلام Telegram بأن التطبيق جاهز
+            tg.ready();
+            
+            // ✅ بدء العملية: preload ثم عرض الإعلان
+            preloadAd();
+            
+            setTimeout(() => {
+                if (!adCompleted && !redirectAttempted) {
+                    showAd();
+                }
+            }, 1000);
+            
+        })();
     </script>
 </body>
 </html>
