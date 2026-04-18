@@ -19,9 +19,7 @@ body{
     height:100vh;
     margin:0;
 }
-.box{
-    text-align:center;
-}
+.box{text-align:center;}
 button{
     display:none;
     margin-top:20px;
@@ -53,34 +51,61 @@ button{
 </div>
 
 <script>
+
 const tg = window.Telegram.WebApp;
 tg.expand();
 tg.ready();
 
 const ZONE_ID = "10892924";
-let target = null;
 
-/* فك التشفير */
-function decode(data){
+/* =========================
+   🔥 Base62 SYSTEM
+========================= */
+
+const BASE62 = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+/* decode Base62 → string */
+function decodeBase62(str){
     try{
-        data = data.replace(/-/g,'+').replace(/_/g,'/');
-        while(data.length % 4) data += "=";
-        return atob(data);
-    }catch{
+        let num = 0n;
+
+        for(let c of str){
+            num = num * 62n + BigInt(BASE62.indexOf(c));
+        }
+
+        let bytes = [];
+        while(num > 0n){
+            bytes.unshift(Number(num & 255n));
+            num = num >> 8n;
+        }
+
+        return new TextDecoder().decode(new Uint8Array(bytes));
+    }catch(e){
         return null;
     }
 }
 
-/* جلب الرابط */
-const param = tg.initDataUnsafe?.start_param;
-target = decode(param);
+/* =========================
+   📥 Get Param
+========================= */
 
-/* تحقق */
+const param = tg.initDataUnsafe?.start_param;
+
+/* فك Base62 */
+let target = param ? decodeBase62(param) : null;
+
+/* =========================
+   ❌ Validation
+========================= */
+
 if(!target || !target.startsWith("http")){
     document.getElementById("text").innerText = "❌ رابط غير صالح";
 }
 
-/* عرض الإعلان */
+/* =========================
+   🎬 Ad logic
+========================= */
+
 function showAd(){
 
     if(typeof window[`show_${ZONE_ID}`] !== "function"){
@@ -88,19 +113,25 @@ function showAd(){
         return;
     }
 
-    window[`show_${ZONE_ID}`]({ type: "end" })
+    window[`show_${ZONE_ID}`]({ type:"end" })
     .then(showButton)
     .catch(showButton);
 }
 
-/* إظهار الزر */
+/* =========================
+   🔘 Show button
+========================= */
+
 function showButton(){
     document.getElementById("loader").style.display = "none";
     document.getElementById("text").innerText = "اضغط للمتابعة";
     document.getElementById("btn").style.display = "inline-block";
 }
 
-/* عند الضغط */
+/* =========================
+   🚀 Redirect
+========================= */
+
 document.getElementById("btn").onclick = function(){
 
     if(!target) return;
@@ -109,7 +140,7 @@ document.getElementById("btn").onclick = function(){
 
 };
 
-/* بدء */
+/* start */
 setTimeout(showAd, 1000);
 
 </script>
