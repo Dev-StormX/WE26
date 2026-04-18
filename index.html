@@ -1,14 +1,13 @@
-
 <!DOCTYPE html>
 <html lang="ar">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>رابط مختصر - شاهد الإعلان واستمر</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://telegram.org/js/telegram-web-app.js?62"></script>
     
-    <!-- Monetag SDK - الطريقة الصحيحة -->
-    <script src="https://libtl.com/sdk.js" data-zone="10892924" data-sdk="show_10892924"></script>
+    <!-- Monetag SDK -->
+    <script src='//libtl.com/sdk.js' data-zone='10892924' data-sdk='show_10892924'></script>
     
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -126,7 +125,27 @@
         // تهيئة Telegram WebApp
         const tg = window.Telegram.WebApp;
         tg.expand();
-        tg.enableClosingConfirmation();
+        
+        // ✅ الحل الأساسي: تفعيل زر الرجوع ومنع الإغلاق التلقائي
+        tg.BackButton.show(); // إظهار زر الرجوع
+        tg.enableClosingConfirmation(); // تفعيل تأكيد الإغلاق
+        
+        // التعامل مع ضغط زر الرجوع
+        tg.BackButton.onClick(() => {
+            // بدلاً من إغلاق التطبيق، نعرض رسالة أو نتعامل مع الموقف
+            tg.showPopup({
+                title: "⚠️ تحذير",
+                message: "لم تقم بمشاهدة الإعلان بعد. هل تريد الخروج؟",
+                buttons: [
+                    { id: "cancel", type: "cancel", text: "إكمال مشاهدة الإعلان" },
+                    { id: "exit", type: "destructive", text: "خروج" }
+                ]
+            }, (buttonId) => {
+                if (buttonId === "exit") {
+                    tg.close(); // إغلاق التطبيق فقط إذا أكد المستخدم
+                }
+            });
+        });
         
         // رابط التحويل النهائي - غيّره إلى رابطك
         const TARGET_URL = "https://t.me/YourChannel";
@@ -151,7 +170,7 @@
             return typeof window[`show_${ZONE_ID}`] === 'function';
         }
         
-        // عرض الإعلان بالطريقة الصحيحة حسب وثائق Monetag
+        // عرض الإعلان
         function showAd() {
             if (!isAdAvailable()) {
                 messageEl.innerHTML = "⚠️ الإعلان غير متوفر حالياً";
@@ -163,38 +182,27 @@
             messageEl.innerHTML = "📺 جاري تشغيل الإعلان...";
             hintEl.innerHTML = "⏱️ انتظر 15 ثانية حتى يظهر زر الإغلاق";
             
-            // استدعاء الإعلان بالطريقة الصحيحة مع معالجة الأخطاء
-            // استخدام catchIfNoFeed للتعامل مع حالة عدم وجود إعلانات
             const adFunction = window[`show_${ZONE_ID}`];
             
-            // محاولة عرض الإعلان مع معاملات إضافية للتحكم بشكل أفضل
             adFunction({ 
                 catchIfNoFeed: true,
                 requestVar: 'redirect_app'
             })
-            .then((result) => {
-                // تم مشاهدة الإعلان بنجاح
-                console.log('Ad completed:', result);
+            .then(() => {
                 adCompleted = true;
-                
-                // إخفاء واجهة الانتظار وإظهار النجاح
                 spinner.style.display = 'none';
                 waitingBox.style.display = 'none';
                 successBox.style.display = 'block';
                 
-                // إرسال بيانات إلى البوت
                 tg.sendData(JSON.stringify({
                     action: 'ad_watched',
                     timestamp: Date.now(),
-                    zone: ZONE_ID,
-                    reward_event_type: result?.reward_event_type || 'valued'
+                    zone: ZONE_ID
                 }));
                 
-                // التحويل بعد ثانية
                 setTimeout(() => redirectToTarget(), 1000);
             })
             .catch((error) => {
-                // فشل الإعلان أو أغلقه المستخدم قبل 15 ثانية
                 console.error('Ad error:', error);
                 showErrorAndRetry();
             });
@@ -230,10 +238,9 @@
             setTimeout(() => showAd(), 500);
         }
         
-        // زر إعادة المحاولة
+        // أزرار التحكم
         retryBtn.addEventListener('click', retryAd);
         
-        // زر التحويل المباشر كحل أخير (يظهر بعد 30 ثانية)
         setTimeout(() => {
             if (!adCompleted && !redirectAttempted) {
                 manualBtn.style.display = 'block';
@@ -247,7 +254,7 @@
         // بدء التطبيق
         setTimeout(() => showAd(), 500);
         
-        // منع الإغلاق العرضي
+        // منع الإغلاق العرضي للصفحة
         window.addEventListener('beforeunload', (e) => {
             if (!adCompleted && !redirectAttempted) {
                 e.preventDefault();
@@ -255,8 +262,9 @@
             }
         });
         
-        // معلومات المستخدم
+        // معلومات المستخدم للتأكد
         console.log('User:', tg.initDataUnsafe?.user);
+        console.log('BackButton available:', !!tg.BackButton);
     </script>
 </body>
 </html>
