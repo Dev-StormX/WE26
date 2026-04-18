@@ -52,14 +52,24 @@ const ZONE_ID = "10892924";
 /* =========================
    فقط startapp (المهم)
 ========================= */
-let data = tg.initDataUnsafe?.start_param;
 
-if (!data) {
+let url = tg.initDataUnsafe.start_param;
+
+// restore base64 padding
+url = url.replace(/-/g, '+').replace(/_/g, '/');
+
+while (url.length % 4) {
+    url += "=";
+}
+
+url = atob(url);
+    
+if (!url) {
     document.getElementById("text").innerText =
         "⚠️ لا يوجد رابط للتحويل";
 } else {
 
-    let target = data;
+    let target = url;
 
     /* base64 decode */
     try {
