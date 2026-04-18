@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>رابط مختصر - انتظر قليلاً</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--tg-theme-bg-color, #ffffff);
+            color: var(--tg-theme-text-color, #000000);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            text-align: center;
+            max-width: 400px;
+            width: 100%;
+        }
+
+        .timer-circle {
+            width: 150px;
+            height: 150px;
+            margin: 0 auto 30px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .timer-svg {
+            transform: rotate(-90deg);
+        }
+
+        .timer-bg {
+            stroke: var(--tg-theme-secondary-bg-color, #e0e0e0);
+        }
+
+        .timer-progress {
+            stroke: var(--tg-theme-button-color, #3390ec);
+            transition: stroke-dashoffset 0.1s linear;
+        }
+
+        .timer-text {
+            position: absolute;
+            font-size: 48px;
+            font-weight: bold;
+            color: var(--tg-theme-button-color, #3390ec);
+        }
+
+        .message {
+            font-size: 18px;
+            margin: 20px 0;
+            color: var(--tg-theme-hint-color, #8e8e8e);
+        }
+
+        .ad-space {
+            background: var(--tg-theme-secondary-bg-color, #f0f0f0);
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+            min-height: 200px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .ad-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: var(--tg-theme-text-color, #000000);
+        }
+
+        .button {
+            background: var(--tg-theme-button-color, #3390ec);
+            color: var(--tg-theme-button-text-color, #ffffff);
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            width: 100%;
+            transition: opacity 0.3s;
+        }
+
+        .button:active {
+            opacity: 0.8;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="timer-circle">
+            <svg class="timer-svg" width="150" height="150">
+                <circle class="timer-bg" cx="75" cy="75" r="70" fill="none" stroke-width="8"/>
+                <circle class="timer-progress" cx="75" cy="75" r="70" fill="none" stroke-width="8" 
+                        stroke-dasharray="439.82" stroke-dashoffset="0"/>
+            </svg>
+            <div class="timer-text" id="timerText">5</div>
+        </div>
+
+        <div class="message" id="message">
+            🔄 جاري التحويل خلال...
+        </div>
+
+        <div class="ad-space" id="adSpace">
+            <div class="ad-title">⭐ إعلان ممول ⭐</div>
+            <p style="margin-top: 10px;">شكراً لدعمكم! سيتم تحويلك بعد 5 ثواني</p>
+            <p style="margin-top: 20px; font-size: 14px;">🎯 يمكنك وضع إعلانك هنا</p>
+        </div>
+
+        <button class="button hidden" id="manualButton">اضغط للمتابعة</button>
+    </div>
+
+    <script>
+        // تهيئة تطبيق Telegram
+        const tg = window.Telegram.WebApp;
+        tg.expand(); // توسيع التطبيق لملء الشاشة
+        tg.enableClosingConfirmation(); // تأكيد الإغلاق
+
+        // رابط التحويل النهائي (غيره إلى الرابط الذي تريد)
+        const TARGET_URL = "http://t.me/StreamXSvBot?start=f_Mjg"; // ⚠️ غيّر هذا إلى رابطك الحقيقي
+        
+        // إعدادات العد التنازلي
+        let countdown = 5;
+        const timerText = document.getElementById('timerText');
+        const messageDiv = document.getElementById('message');
+        const manualButton = document.getElementById('manualButton');
+        
+        // رسم دائرة التقدم
+        const circle = document.querySelector('.timer-progress');
+        const circumference = 439.82; // 2 * PI * 70
+        
+        function updateTimer() {
+            timerText.textContent = countdown;
+            
+            // تحديث دائرة التقدم
+            const offset = circumference - (countdown / 5) * circumference;
+            circle.style.strokeDashoffset = offset;
+            
+            if (countdown <= 0) {
+                redirectToTarget();
+            } else {
+                countdown--;
+                setTimeout(updateTimer, 1000);
+            }
+        }
+        
+        function redirectToTarget() {
+            // إرسال إحصائية إلى البوت (اختياري)
+            tg.sendData(JSON.stringify({
+                action: 'redirect',
+                timestamp: Date.now(),
+                target: TARGET_URL
+            }));
+            
+            // تغيير النص
+            messageDiv.innerHTML = "🚀 جاري التحويل الآن...";
+            timerText.style.display = 'none';
+            
+            // التحويل إلى الرابط المستهدف
+            window.location.href = TARGET_URL;
+        }
+        
+        // بدء العد التنازلي
+        updateTimer();
+        
+        // إظهار زر المتابعة اليدوي بعد 3 ثواني (في حال تعطل التحويل التلقائي)
+        setTimeout(() => {
+            manualButton.classList.remove('hidden');
+            manualButton.textContent = "⏩ اضغط هنا إذا لم يتم تحويلك تلقائياً";
+        }, 3000);
+        
+        // زر المتابعة اليدوي
+        manualButton.addEventListener('click', redirectToTarget);
+        
+        // إرسال بيانات المستخدم إلى البوت (اختياري)
+        const user = tg.initDataUnsafe?.user;
+        if (user) {
+            console.log('User:', user);
+            // يمكنك إرسال بيانات المستخدم لخادمك
+        }
+    </script>
+</body>
+</html>
