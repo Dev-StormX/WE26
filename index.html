@@ -84,9 +84,9 @@
             opacity: 0.8;
         }
 
-        .button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
+        .retry-button {
+            background: #ff3b30;
+            margin-top: 15px;
         }
 
         .success-box {
@@ -98,7 +98,12 @@
             display: none;
         }
 
-        .hidden {
+        .error-box {
+            background: rgba(255, 59, 48, 0.1);
+            border: 1px solid #ff3b30;
+            border-radius: 12px;
+            padding: 15px;
+            margin: 20px 0;
             display: none;
         }
 
@@ -132,6 +137,14 @@
             <small>جاري التحويل إلى الرابط المطلوب...</small>
         </div>
 
+        <div class="error-box" id="errorBox">
+            ❌ لم يتم مشاهدة الإعلان بالكامل
+            <br>
+            <small>يرجى مشاهدة الإعلان حتى النهاية للتحويل</small>
+            <br>
+            <button class="button retry-button" id="retryButton">🔄 إعادة محاولة مشاهدة الإعلان</button>
+        </div>
+
         <button class="button hidden" id="manualButton">⚠️ اضغط إذا لم يتم التحويل تلقائياً</button>
     </div>
 
@@ -141,27 +154,71 @@
         tg.expand();
         tg.enableClosingConfirmation();
         
+        // منع إغلاق التطبيق عند النقر خارج الإعلان
+        tg.isClosingConfirmationEnabled = true;
+        
         // رابط التحويل النهائي (غيّره إلى رابطك)
         const TARGET_URL = "https://t.me/YourChannel"; // ⚠️ غيّر هذا إلى رابطك الحقيقي
         
         const waitingBox = document.getElementById('waitingBox');
         const successBox = document.getElementById('successBox');
+        const errorBox = document.getElementById('errorBox');
         const messageEl = document.getElementById('message');
         const hintEl = document.getElementById('hint');
         const spinner = document.getElementById('spinner');
         const manualButton = document.getElementById('manualButton');
+        const retryButton = document.getElementById('retryButton');
         
         let adShown = false;
+        let adCompleted = false;
+        let redirectAttempted = false;
         
         // التحقق من وجود دالة الإعلان
         function isAdAvailable() {
             return typeof show_10892924 === 'function';
         }
         
+        // منع إغلاق التطبيق
+        function preventAppClose() {
+            try {
+                // منع حدث الإغلاق
+                window.addEventListener('beforeunload', function(e) {
+                    if (!adCompleted && !redirectAttempted) {
+                        e.preventDefault();
+                        e.returnValue = '';
+                        return '';
+                    }
+                });
+                
+                // منع الإغلاق عبر Telegram WebApp
+                if (tg && tg.close) {
+                    const originalClose = tg.close;
+                    tg.close = function() {
+                        if (!adCompleted && !redirectAttempted) {
+                            console.log('تم منع إغلاق التطبيق قبل مشاهدة الإعلان');
+                            showErrorAndRetry();
+                            return false;
+                        }
+                        return originalClose.apply(this, arguments);
+                    };
+                }
+            } catch(e) {
+                console.log('Prevent close error:', e);
+            }
+        }
+        
+        // عرض رسالة خطأ وخيار إعادة المحاولة
+        function showErrorAndRetry() {
+            waitingBox.style.display = 'none';
+            successBox.style.display = 'none';
+            errorBox.style.display = 'block';
+            spinner.style.display = 'none';
+        }
+        
         // عرض الإعلان
         function showAd() {
             messageEl.innerHTML = "📺 جاري تشغيل الإعلان...";
-            hintEl.innerHTML = "شاهد الإعلان حتى النهاية ليتم تحويلك";
+            hintEl.innerHTML = "⚠️ لا تغلق الإعلان - شاهده حتى النهاية";
             
             if (!isAdAvailable()) {
                 messageEl.innerHTML = "⚠️ عذراً، الإعلان غير متوفر حالياً";
@@ -172,11 +229,24 @@
                 return;
             }
             
-            // استدعاء الإعلان المكافأ
-            show_10892924()
+            // إنشاء Promise مخصص للتحكم بشكل أفضل
+            const adPromise = show_10892924();
+            
+            // مهلة زمنية للإعلان (30 ثانية كحد أقصى)
+            const timeoutId = setTimeout(() => {
+                console.log('Ad timeout');
+                if (!adCompleted) {
+                    showErrorAndRetry();
+                }
+            }, 30000);
+            
+            adPromise
                 .then(() => {
+                    clearTimeout(timeoutId);
                     // المستخدم شاهد الإعلان بالكامل
+                    adCompleted = true;
                     adShown = true;
+                    
                     messageEl.innerHTML = "🎉 شكراً لمشاهدة الإعلان!";
                     hintEl.innerHTML = "جاري تحويلك إلى الرابط المطلوب...";
                     
@@ -185,7 +255,7 @@
                     waitingBox.style.display = 'none';
                     successBox.style.display = 'block';
                     
-                    // إرسال بيانات للمتابعة (اختياري)
+                    // إرسال بيانات للمتابعة
                     tg.sendData(JSON.stringify({
                         action: 'ad_watched',
                         timestamp: Date.now(),
@@ -194,33 +264,59 @@
                     
                     // التحويل بعد ثانية واحدة
                     setTimeout(() => {
-                        redirectToTarget();
+                        if (!redirectAttempted) {
+                            redirectAttempted = true;
+                            redirectToTarget();
+                        }
                     }, 1000);
                 })
                 .catch((error) => {
-                    // في حال خطأ في الإعلان
-                    console.error('Ad error:', error);
-                    messageEl.innerHTML = "⚠️ حدث خطأ في الإعلان";
-                    hintEl.innerHTML = "سيتم تحويلك خلال 5 ثوانٍ كبديل";
-                    
-                    setTimeout(() => {
-                        redirectToTarget();
-                    }, 5000);
+                    clearTimeout(timeoutId);
+                    console.error('Ad error or closed early:', error);
+                    // المستخدم أغلق الإعلان قبل نهايته
+                    showErrorAndRetry();
                 });
         }
         
         function redirectToTarget() {
+            if (redirectAttempted) return;
+            redirectAttempted = true;
+            
             // إرسال إحصائية التحويل
             tg.sendData(JSON.stringify({
                 action: 'redirect',
                 timestamp: Date.now(),
                 target: TARGET_URL,
-                ad_watched: adShown
+                ad_watched: adShown,
+                ad_completed: adCompleted
             }));
             
             // التحويل إلى الرابط المستهدف
             window.location.href = TARGET_URL;
         }
+        
+        // إعادة المحاولة
+        function retryAd() {
+            adCompleted = false;
+            adShown = false;
+            redirectAttempted = false;
+            
+            // إعادة تعيين الواجهة
+            errorBox.style.display = 'none';
+            waitingBox.style.display = 'block';
+            successBox.style.display = 'none';
+            spinner.style.display = 'block';
+            messageEl.innerHTML = "🔄 جاري إعادة تجهيز الإعلان...";
+            hintEl.innerHTML = "يرجى مشاهدة الإعلان حتى النهاية هذه المرة";
+            
+            // محاولة عرض الإعلان مرة أخرى
+            setTimeout(() => {
+                showAd();
+            }, 500);
+        }
+        
+        // تفعيل منع الإغلاق
+        preventAppClose();
         
         // بدء التطبيق: عرض الإعلان فوراً
         setTimeout(() => {
@@ -230,16 +326,34 @@
         // زر المتابعة اليدوي (في حال تعطل أي شيء)
         setTimeout(() => {
             manualButton.classList.remove('hidden');
-            manualButton.textContent = "⏩ اضغط هنا إذا لم يتم تحويلك تلقائياً";
-        }, 15000);
+            manualButton.textContent = "⏩ اضغط هنا للتحويل المباشر (بدون إعلان)";
+        }, 20000);
         
-        manualButton.addEventListener('click', redirectToTarget);
+        manualButton.addEventListener('click', () => {
+            if (!redirectAttempted) {
+                redirectAttempted = true;
+                redirectToTarget();
+            }
+        });
         
-        // إرسال بيانات المستخدم (اختياري)
+        // زر إعادة المحاولة
+        retryButton.addEventListener('click', retryAd);
+        
+        // إرسال بيانات المستخدم
         const user = tg.initDataUnsafe?.user;
         if (user) {
             console.log('User connected:', user.id, user.username);
         }
+        
+        // منع الخروج بالزر الخلفي للمتصفح
+        window.addEventListener('popstate', function(e) {
+            if (!adCompleted && !redirectAttempted) {
+                e.preventDefault();
+                showErrorAndRetry();
+                history.pushState(null, null, location.href);
+            }
+        });
+        history.pushState(null, null, location.href);
     </script>
 </body>
 </html>
